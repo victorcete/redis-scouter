@@ -194,7 +194,7 @@ func main() {
 		select {
 		case <-ticker:
 			Stats.Do(func(kv expvar.KeyValue) {
-				graph.SimpleSend(fmt.Sprintf("temp.%s.%s", hostname, kv.Key), kv.Value.String())
+				graph.SimpleSend(fmt.Sprintf("scouter.%s.%s", hostname, kv.Key), kv.Value.String())
 			})
 		}
 	}
