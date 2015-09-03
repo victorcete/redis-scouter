@@ -163,7 +163,7 @@ func main() {
 	graphiteHost := flag.String("graphite-host", "localhost", "graphite hostname")
 	graphitePort := flag.Int("graphite-port", 2003, "graphite port")
 	interval := flag.Int("interval", 60, "interval for sending graphite metrics")
-	simulate := flag.Bool("simulate", false, "send to graphite or simulate sending via stdout")
+	simulate := flag.Bool("simulate", false, "simulate sending to graphite via stdout")
 	flag.Parse()
 
 	// flag checks
