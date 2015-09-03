@@ -1,7 +1,7 @@
 # redis-scouter
 Dynamic monitoring for Redis (as a queue)
 
-![OMG it's a DBZ scouter!](https://raw.githubusercontent.com/victorcete/redis-scouter/master/img/Scouter.png)
+![alt text](https://raw.githubusercontent.com/victorcete/redis-scouter/master/img/Scouter.png "OMG it's a DBZ scouter!")
 
 ## Why?
 If you use Redis as a queue (using the [LIST](http://redis.io/commands#list) commands) you could end up having zero visibility about what is going on with your queues. If your application workers are not logging any stats at all, you can use redis-scouter as a replacement for it.
