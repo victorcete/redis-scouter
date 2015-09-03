@@ -4,9 +4,9 @@ Dynamic monitoring for Redis instances used as queues.
 ![alt text](https://raw.githubusercontent.com/victorcete/redis-scouter/master/img/Scouter.png "OMG it's a DBZ scouter!")
 
 ## Why?
-One of the most common usages of Redis is to make it behave like a [queue](https://en.wikipedia.org/wiki/Queue_(abstract_data_type)). On top of that, you would probably have some producer and consumer approach.
+One of the most common usages of Redis is to make it behave like a [queue](https://en.wikipedia.org/wiki/Queue_(abstract_data_type)). On top of that, you would probably have some producers and consumers working with its contents.
 
-In a perfect world, you would also be able to generate statistics from producer/consumer land, but it's not always the case. So you may end up having a relatively big ecosystem of [LIST](http://redis.io/commands#list) keys used as queues but you won't know the amount of work that is behind unless:
+In a perfect world, you would also have statistics from producer/consumer land, but it's not always the case. So you may end up having a relatively big ecosystem of [LIST](http://redis.io/commands#list) keys used as queues but you won't know the amount of work that is behind unless:
 
 You monitor the instance:
 ```
