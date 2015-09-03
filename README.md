@@ -32,3 +32,26 @@ Your Redis server should have the keyspace notifications enabled, but __redis-sc
 If you already have some keyspace-events enabled, it __won't__ override the existing config. It will add (if needed) the 'l' and 'K' events to be published.
 
 If you don't have any kind of keyspace-events being generated, it will set its value to 'lK' to be able to gather the required stats.
+
+## Usage
+Get __redis-scouter__ from you command line with:
+```
+go get github.com/victorcete/redis-scouter
+go install github.com/victorcete/redis-scouter
+```
+
+The binary should be on your PATH now, you can run it with the following flags:
+```
+$ redis-scouter -h
+Usage of redis-scouter:
+  -graphite-host string
+    	graphite hostname (default "localhost")
+  -graphite-port int
+    	graphite port (default 2003)
+  -interval int
+    	interval for sending graphite metrics (default 60)
+  -ports value
+    	comma-separated list of redis ports (default [])
+  -simulate
+    	send to graphite or simulate sending via stdout
+```
