@@ -29,7 +29,7 @@ scouter.<hostname>.<instance_port>.<queue_name>.<operation_type> <value> <timest
 ## Prerequisites
 Your Redis server should have the keyspace notifications enabled, but __redis-scouter__ will take care of that too.
 
-If you already have some keyspace-events enabled, it __won't__ override the existing config. It will add (if needed) the 'l' and 'K' events to be published.
+If you already have some keyspace-events enabled, it __won't__ override the existing config. It will add (if needed) the 'l' and 'K' events to be published. More info about keyspace events [here](http://redis.io/topics/notifications)
 
 If you don't have any kind of keyspace-events being generated, it will set its value to 'lK' to be able to gather the required stats.
 
