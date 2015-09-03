@@ -20,15 +20,15 @@ redis-cli -p XXXX config set notify-keyspace-events lK
 
 ## The solution
 
-You can use redis-scouter to monitor what `LIST` keys are being used. It will count the number of `LPUSH LPUSHX RPUSH RPUSHX LPOP BLPOP RPOP BRPOP` operations performed and generate metrics for graphite in the following format:
+You can use __redis-scouter__ to monitor what `LIST` keys are being used. It will count the number of `LPUSH LPUSHX RPUSH RPUSHX LPOP BLPOP RPOP BRPOP` operations performed and generate metrics for graphite in the following format:
 
 ```
 scouter.<hostname>.<instance_port>.<queue_name>.<operation_type> <value> <timestamp>
 ```
 
 ## Prerequisites
-Your Redis server should have the keyspace notifications enabled, but redis-scouter will take care of that too.
+Your Redis server should have the keyspace notifications enabled, but __redis-scouter__ will take care of that too.
 
-If you already have some keyspace-events enabled, it *won't* override the existing config. It will add (if needed) the 'l' and 'K' events to be published.
+If you already have some keyspace-events enabled, it __won't__ override the existing config. It will add (if needed) the 'l' and 'K' events to be published.
 
 If you don't have any kind of keyspace-events being generated, it will set its value to 'lK' to be able to gather the required stats.
