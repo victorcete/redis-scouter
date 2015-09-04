@@ -87,24 +87,29 @@ func instanceAlive(pool *redis.Pool) bool {
 	return true
 }
 
-func instanceIsMaster(pool *redis.Pool, port string) bool {
+func instanceIsMaster(pool *redis.Pool, port string) {
 	c := pool.Get()
-	defer c.Close()
+	//defer c.Close()
 
-	master, err := redis.StringMap(c.Do("CONFIG", "GET", "slaveof"))
-	if err != nil {
-		log.Println(err)
-		return false
-	}
-	for _, value := range master {
-		if value == "" {
-			log.Printf("instance on port %s is a master\n", port)
-			return true
-		} else {
-			log.Printf("instance on port %s is a slave of %s\n", port, value)
+	for {
+		master, err := redis.StringMap(c.Do("CONFIG", "GET", "slaveof"))
+		if err != nil {
+			log.Println(err)
+			// Retry connection to Redis until it is back
+			defer c.Close()
+			time.Sleep(time.Second * 1)
+			c = pool.Get()
+			continue
 		}
+		for _, value := range master {
+			if value == "" {
+				log.Printf("instance on port %s is a master\n", port)
+			} else {
+				log.Printf("instance on port %s is a slave of %s\n", port, value)
+			}
+		}
+		time.Sleep(time.Second * 5)
 	}
-	return false
 }
 
 func queueStats(port string) {
