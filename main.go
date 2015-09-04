@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
@@ -190,12 +192,24 @@ func main() {
 		go queueStats(port)
 	}
 
+	sig := make(chan os.Signal, 1)
+	done := make(chan bool, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-sig
+		done <- true
+	}()
+
 	for {
 		select {
 		case <-ticker:
 			Stats.Do(func(kv expvar.KeyValue) {
 				graph.SimpleSend(fmt.Sprintf("scouter.%s.%s", hostname, kv.Key), kv.Value.String())
 			})
+		case <-done:
+			log.Println("user aborted")
+			return
 		}
 	}
 }

@@ -26,9 +26,9 @@ func (i *redisPorts) Set(value string) error {
 	if len(*i) > 0 {
 		return errors.New("redis ports flag already set")
 	}
-	for _, val := range strings.Split(value, ",") {
-		if !contains(*i, val) {
-			*i = append(*i, val)
+	for _, v := range strings.Split(value, ",") {
+		if !contains(*i, v) {
+			*i = append(*i, v)
 		}
 	}
 	return nil
