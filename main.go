@@ -41,7 +41,7 @@ func HostnameGraphite() string {
 	return strings.Replace(hostname, ".", "_", -1)
 }
 
-func keyspaceEnable(pool *redis.Pool) {
+func keyspaceEnable(pool *redis.Pool, port string) {
 	c := pool.Get()
 	defer c.Close()
 
@@ -51,15 +51,17 @@ func keyspaceEnable(pool *redis.Pool) {
 		log.Println(err)
 		return
 	}
+
 	for _, v := range notify {
 		config := keyspaceConfigRegex.FindString(v)
 		if config != "" {
 			// already enabled, we can listen for the LIST events
-			log.Println("LIST events notifications already enabled")
+			log.Printf("[%s] LIST events notifications already enabled\n", port)
 		} else {
 			// enable LIST events without replacing the existing config (if any)
-			log.Println("Enabling LIST events notifications")
+			log.Printf("[%s] Enabling LIST events notifications\n", port)
 			if v == "" {
+				log.Printf("[%s] There was no previous notify-keyspace-events config\n", port)
 				_, err := redis.String(c.Do("CONFIG", "SET", "notify-keyspace-events", "lK"))
 				if err != nil {
 					log.Println(err)
@@ -67,6 +69,7 @@ func keyspaceEnable(pool *redis.Pool) {
 				}
 			} else {
 				// do not override the existing config
+				log.Printf("[%s] Found previous notify-keyspace-events config, appending LIST events notifications\n", port)
 				_, err := redis.String(c.Do("CONFIG", "SET", "notify-keyspace-events", v+"lK"))
 				if err != nil {
 					log.Println(err)
@@ -89,7 +92,6 @@ func instanceAlive(pool *redis.Pool) bool {
 
 func instanceIsMaster(pool *redis.Pool, port string) {
 	c := pool.Get()
-	//defer c.Close()
 
 	for {
 		master, err := redis.StringMap(c.Do("CONFIG", "GET", "slaveof"))
@@ -103,9 +105,9 @@ func instanceIsMaster(pool *redis.Pool, port string) {
 		}
 		for _, value := range master {
 			if value == "" {
-				log.Printf("instance on port %s is a master\n", port)
+				chans[port] <- true
 			} else {
-				log.Printf("instance on port %s is a slave of %s\n", port, value)
+				chans[port] <- false
 			}
 		}
 		time.Sleep(time.Second * 5)
@@ -121,39 +123,48 @@ func queueStats(port string) {
 		return
 	}
 
-	go keyspaceEnable(pool)
-
 	// subscribe to the keyspace notifications
 	c.Send("PSUBSCRIBE", "__keyspace*")
 	c.Flush()
 	// ignore first message received when subscribing
 	c.Receive()
 
-	// wait for published notifications
-	for {
-		reply, err := redis.StringMap(c.Receive())
-		if err != nil {
-			log.Println(err)
+	go instanceIsMaster(pool, port)
+	go keyspaceEnable(pool, port)
 
-			// Retry connection to Redis until it is back
-			defer c.Close()
-			log.Printf("connection to redis lost. retry in 1s\n")
-			time.Sleep(time.Second * 1)
-			c = pool.Get()
-			go keyspaceEnable(pool)
-			c.Send("PSUBSCRIBE", "*")
-			c.Flush()
-			c.Receive()
-			continue
-		}
-		// match for a LIST keyspace event
-		for k, v := range reply {
-			operation := listOperationsRegex.FindString(v)
-			queue := keyspaceRegex.FindStringSubmatch(k)
-			if len(queue) == 2 && operation != "" {
-				//log.Printf("%s on %s queue\n", operation, queue[1])
-				Stats.Add(fmt.Sprintf("%s.%s.%s", port, queue[1], operation), 1)
+	fetchStats := true
+
+	for {
+		select {
+		case fetchStats = <-chans[port]:
+		default:
+			if fetchStats {
+				reply, err := redis.StringMap(c.Receive())
+				if err != nil {
+					// Retry connection to Redis until it is back
+					defer c.Close()
+					log.Printf("connection to redis lost. retry in 1s\n")
+					time.Sleep(time.Second * 1)
+					c = pool.Get()
+					go keyspaceEnable(pool, port)
+					c.Send("PSUBSCRIBE", "*")
+					c.Flush()
+					c.Receive()
+					continue
+				}
+				// match for a LIST keyspace event
+				for k, v := range reply {
+					operation := listOperationsRegex.FindString(v)
+					queue := keyspaceRegex.FindStringSubmatch(k)
+					if len(queue) == 2 && operation != "" {
+						Stats.Add(fmt.Sprintf("%s.%s.%s", port, queue[1], operation), 1)
+					}
+				}
+			} else {
+				// nothing to do. instance is a slave
+				time.Sleep(time.Second * 1)
 			}
+
 		}
 	}
 }
@@ -164,6 +175,7 @@ var keyspaceRegex = regexp.MustCompile("^__keyspace.*__:(?P<queue_name>.*)$")
 var keyspaceConfigRegex = regexp.MustCompile("^(AK.*|.*l.*K.*)$")
 var ports redisPorts
 var graph *graphite.Graphite
+var chans = make(map[string](chan bool))
 
 func main() {
 	flag.Var(&ports, "ports", "comma-separated list of redis ports")
@@ -193,6 +205,7 @@ func main() {
 	ticker := time.NewTicker(time.Second * time.Duration(*interval)).C
 
 	for _, port := range ports {
+		chans[port] = make(chan bool)
 		log.Println("spawning collector for port ", port)
 		go queueStats(port)
 	}
