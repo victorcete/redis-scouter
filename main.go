@@ -15,6 +15,10 @@ import (
 	"github.com/marpaia/graphite-golang"
 )
 
+const (
+	masterCheckInterval int = 5
+)
+
 func keyspaceEnable(pool *redis.Pool, port string) {
 	c := pool.Get()
 	defer c.Close()
@@ -65,6 +69,7 @@ func instanceAlive(pool *redis.Pool) bool {
 
 func instanceIsMaster(pool *redis.Pool, port string) {
 	c := pool.Get()
+	defer c.Close()
 
 	for {
 		master, err := redis.StringMap(c.Do("CONFIG", "GET", "slaveof"))
@@ -83,7 +88,7 @@ func instanceIsMaster(pool *redis.Pool, port string) {
 				chans[port] <- false
 			}
 		}
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * time.Duration(masterCheckInterval))
 	}
 }
 
