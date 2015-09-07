@@ -6,6 +6,25 @@ import (
 	"strings"
 )
 
+// https://godoc.org/github.com/garyburd/redigo/redis#Pool
+func newPool(port string) *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:     4,
+		IdleTimeout: 60 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", ":"+port)
+			if err != nil {
+				return nil, err
+			}
+			return c, err
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
+	}
+}
+
 // generic method to check if an element exists in a slice
 func contains(s []string, i string) bool {
 	for _, v := range s {
