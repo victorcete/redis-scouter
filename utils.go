@@ -3,7 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"time"
+
+	"github.com/garyburd/redigo/redis"
 )
 
 // https://godoc.org/github.com/garyburd/redigo/redis#Pool
@@ -23,6 +27,12 @@ func newPool(port string) *redis.Pool {
 			return err
 		},
 	}
+}
+
+// fqdn with underscores
+func HostnameGraphite() string {
+	hostname, _ := os.Hostname()
+	return strings.Replace(hostname, ".", "_", -1)
 }
 
 // generic method to check if an element exists in a slice

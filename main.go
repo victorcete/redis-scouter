@@ -8,19 +8,12 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/marpaia/graphite-golang"
 )
-
-// fqdn with underscores
-func HostnameGraphite() string {
-	hostname, _ := os.Hostname()
-	return strings.Replace(hostname, ".", "_", -1)
-}
 
 func keyspaceEnable(pool *redis.Pool, port string) {
 	c := pool.Get()
