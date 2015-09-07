@@ -22,28 +22,27 @@ func keyspaceEnable(pool *redis.Pool, port string) {
 	// check if notify-keyspace-events are enabled
 	notify, err := redis.StringMap(c.Do("CONFIG", "GET", "notify-keyspace-events"))
 	if err != nil {
-		log.Println(err)
+		log.Printf("[keyspace-check] %s\n", err)
 		return
 	}
 
 	for _, v := range notify {
-		config := keyspaceConfigRegex.FindString(v)
-		if config != "" {
-			// already enabled, we can listen for the LIST events
-			log.Printf("[%s] LIST events notifications already enabled\n", port)
+		if keyspaceConfigRegex.FindString(v) != "" {
+			// already enabled, we can already listen for LIST events
+			log.Printf("[keyspace-check-%s] LIST keyspace-notifications already enabled\n", port)
 		} else {
-			// enable LIST events without replacing the existing config (if any)
-			log.Printf("[%s] Enabling LIST events notifications\n", port)
+			// we need to enable notify-keyspace-events for LIST operations (also do not override previous config if any)
 			if v == "" {
-				log.Printf("[%s] There was no previous notify-keyspace-events config\n", port)
+				// no previous config was set
+				log.Printf("[keyspace-check-%s] Enabling LIST keyspace-notifications (no previous config found)\n", port)
 				_, err := redis.String(c.Do("CONFIG", "SET", "notify-keyspace-events", "lK"))
 				if err != nil {
 					log.Println(err)
 					return
 				}
 			} else {
-				// do not override the existing config
-				log.Printf("[%s] Found previous notify-keyspace-events config, appending LIST events notifications\n", port)
+				// previous config found, do not override
+				log.Printf("[keyspace-check-%s] Enabling LIST keyspace-notifications (previous config found)\n", port)
 				_, err := redis.String(c.Do("CONFIG", "SET", "notify-keyspace-events", v+"lK"))
 				if err != nil {
 					log.Println(err)
