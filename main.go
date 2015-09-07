@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"regexp"
@@ -164,6 +166,7 @@ func main() {
 	graphitePort := flag.Int("graphite-port", 2003, "graphite port")
 	interval := flag.Int("interval", 60, "interval for sending graphite metrics")
 	simulate := flag.Bool("simulate", false, "simulate sending to graphite via stdout")
+	profile := flag.Bool("profile", false, "enable pprof features for cpu/heap/goroutine")
 	flag.Parse()
 
 	// flag checks
@@ -172,6 +175,7 @@ func main() {
 		return
 	}
 
+	// simulate graphite sending via stdout
 	if *simulate {
 		graph = graphite.NewGraphiteNop(*graphiteHost, *graphitePort)
 	} else {
@@ -182,6 +186,12 @@ func main() {
 			return
 		}
 	}
+
+	// check for enabled profiling flag
+	if *profile {
+		go http.ListenAndServe(":8888", nil)
+	}
+
 	hostname := hostnameGraphite()
 	ticker := time.NewTicker(time.Second * time.Duration(*interval)).C
 
