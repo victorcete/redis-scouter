@@ -83,9 +83,9 @@ func instanceIsMaster(pool *redis.Pool, port string) {
 		}
 		for _, value := range master {
 			if value == "" {
-				chans[port] <- true
+				//chans[port] <- true
 			} else {
-				chans[port] <- false
+				//chans[port] <- false
 			}
 		}
 		time.Sleep(time.Second * time.Duration(masterCheckInterval))
@@ -107,44 +107,46 @@ func queueStats(port string) {
 	// ignore first message received when subscribing
 	c.Receive()
 
-	go instanceIsMaster(pool, port)
+	//go instanceIsMaster(pool, port)
 	go keyspaceEnable(pool, port)
 
-	fetchStats := true
-
+	//fetchStats := true
 	for {
-		select {
-		case fetchStats = <-chans[port]:
-		default:
-			if fetchStats {
-				reply, err := redis.StringMap(c.Receive())
-				if err != nil {
-					// Retry connection to Redis until it is back
-					defer c.Close()
-					log.Printf("connection to redis lost. retry in 1s\n")
-					time.Sleep(time.Second * 1)
-					c = pool.Get()
-					go keyspaceEnable(pool, port)
-					c.Send("PSUBSCRIBE", "*")
-					c.Flush()
-					c.Receive()
-					continue
-				}
-				// match for a LIST keyspace event
-				for k, v := range reply {
-					operation := listOperationsRegex.FindString(v)
-					queue := keyspaceRegex.FindStringSubmatch(k)
-					if len(queue) == 2 && operation != "" {
-						Stats.Add(fmt.Sprintf("%s.%s.%s", port, queue[1], operation), 1)
-					}
-				}
-			} else {
-				// nothing to do. instance is a slave
-				time.Sleep(time.Second * 1)
+		reply, err := redis.StringMap(c.Receive())
+		if err != nil {
+			// Retry connection to Redis until it is back
+			defer c.Close()
+			log.Printf("connection to redis lost. retry in 1s\n")
+			time.Sleep(time.Second * 1)
+			c = pool.Get()
+			go keyspaceEnable(pool, port)
+			c.Send("PSUBSCRIBE", "*")
+			c.Flush()
+			c.Receive()
+			continue
+		}
+		// match for a LIST keyspace event
+		for k, v := range reply {
+			operation := listOperationsRegex.FindString(v)
+			queue := keyspaceRegex.FindStringSubmatch(k)
+			if len(queue) == 2 && operation != "" {
+				Stats.Add(fmt.Sprintf("%s.%s.%s", port, queue[1], operation), 1)
 			}
-
 		}
 	}
+
+	//for {
+	//	select {
+	//	case fetchStats = <-chans[port]:
+	//	default:
+	//		if fetchStats {
+	//		} else {
+	//			// nothing to do. instance is a slave
+	//			time.Sleep(time.Second * 1)
+	//		}
+	//
+	//	}
+	//}
 }
 
 var Stats = expvar.NewMap("stats").Init()
@@ -153,7 +155,8 @@ var keyspaceRegex = regexp.MustCompile("^__keyspace.*__:(?P<queue_name>.*)$")
 var keyspaceConfigRegex = regexp.MustCompile("^(AK.*|.*l.*K.*)$")
 var ports redisPorts
 var graph *graphite.Graphite
-var chans = make(map[string](chan bool))
+
+//var chans = make(map[string](chan bool))
 
 func main() {
 	flag.Var(&ports, "ports", "comma-separated list of redis ports")
@@ -179,12 +182,12 @@ func main() {
 			return
 		}
 	}
-	hostname := HostnameGraphite()
+	hostname := hostnameGraphite()
 	ticker := time.NewTicker(time.Second * time.Duration(*interval)).C
 
 	for _, port := range ports {
-		chans[port] = make(chan bool)
-		log.Println("spawning collector for port ", port)
+		//chans[port] = make(chan bool)
+		log.Printf("[instance-%s] starting collector\n", port)
 		go queueStats(port)
 	}
 
@@ -204,7 +207,7 @@ func main() {
 				graph.SimpleSend(fmt.Sprintf("scouter.%s.%s", hostname, kv.Key), kv.Value.String())
 			})
 		case <-done:
-			log.Println("user aborted")
+			log.Printf("[main] user aborted execution\n")
 			return
 		}
 	}

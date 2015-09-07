@@ -30,7 +30,7 @@ func newPool(port string) *redis.Pool {
 }
 
 // fqdn with underscores
-func HostnameGraphite() string {
+func hostnameGraphite() string {
 	hostname, _ := os.Hostname()
 	return strings.Replace(hostname, ".", "_", -1)
 }
