@@ -146,3 +146,4 @@ $ redis-scouter -simulate -interval 5 -ports 6379,6380
 
 ## Next steps
 - Send metrics as a cluster/single entity (hostname agnostic)
+- Maybe stop sending metrics of the old master nodes if they became slaves
