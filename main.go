@@ -93,7 +93,10 @@ func instanceIsMaster(pool *redis.Pool, port string) {
 					fetchPossible[port] = false
 				}
 			} else {
-				fetchPossible[port] = true
+				// re-enable metrics
+				if !fetchPossible[port] {
+					fetchPossible[port] = true
+				}
 			}
 		}
 		time.Sleep(time.Second * time.Duration(masterCheckInterval))
