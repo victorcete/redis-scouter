@@ -109,10 +109,9 @@ func queueStats(port string) {
 	}
 
 	// subscribe to the keyspace notifications
-	c.Send("PSUBSCRIBE", "__keyspace@*", "redis-scouter")
+	c.Send("PSUBSCRIBE", "__keyspace@*")
 	c.Flush()
 	// ignore first message received when subscribing
-	c.Receive()
 	c.Receive()
 
 	go instanceIsMaster(pool, port)
@@ -128,9 +127,8 @@ func queueStats(port string) {
 				time.Sleep(time.Second * 1)
 				c = pool.Get()
 				go keyspaceEnable(pool, port)
-				c.Send("PSUBSCRIBE", "__keyspace@*", "redis-scouter")
+				c.Send("PSUBSCRIBE", "__keyspace@*")
 				c.Flush()
-				c.Receive()
 				c.Receive()
 				continue
 			}
