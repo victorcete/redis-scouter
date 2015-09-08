@@ -91,11 +91,13 @@ func instanceIsMaster(pool *redis.Pool, port string) {
 				if fetchPossible[port] {
 					c.Do("PUBLISH", "redis-scouter", "stop")
 					fetchPossible[port] = false
+					log.Printf("[instance-check-%s] became a slave", port)
 				}
 			} else {
 				// re-enable metrics
 				if !fetchPossible[port] {
 					fetchPossible[port] = true
+					log.Printf("[instance-check-%s] became a master", port)
 				}
 			}
 		}
