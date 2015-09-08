@@ -18,7 +18,9 @@ import (
 )
 
 const (
-	masterCheckInterval int = 5
+	masterCheckInterval    int = 1
+	connectionLostInterval int = 1
+	fetchMetricsInterval   int = 1
 )
 
 func keyspaceEnable(pool *redis.Pool, port string) {
@@ -79,20 +81,19 @@ func instanceIsMaster(pool *redis.Pool, port string) {
 			log.Println(err)
 			// Retry connection to Redis until it is back
 			defer c.Close()
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Second * time.Duration(connectionLostInterval))
 			c = pool.Get()
 			continue
 		}
 		for _, value := range master {
 			if value != "" {
 				// instance is now a slave, notify
-				log.Printf("[%s] master-check: instance is now a slave\n", port)
-				fetchPossible[port] = false
-				//c.Do("PUBLISH", "redis-scouter", "stop")
+				if fetchPossible[port] {
+					c.Do("PUBLISH", "redis-scouter", "stop")
+					fetchPossible[port] = false
+				}
 			} else {
-				log.Printf("[%s] master-check: instance is a master\n", port)
 				fetchPossible[port] = true
-				//c.Do("PUBLISH", "redis-scouter", "start")
 			}
 		}
 		time.Sleep(time.Second * time.Duration(masterCheckInterval))
@@ -109,9 +110,10 @@ func queueStats(port string) {
 	}
 
 	// subscribe to the keyspace notifications
-	c.Send("PSUBSCRIBE", "__keyspace@*")
+	c.Send("PSUBSCRIBE", "__keyspace@*", "redis-scouter")
 	c.Flush()
-	// ignore first message received when subscribing
+	// ignore first two ACKs when subscribing
+	c.Receive()
 	c.Receive()
 
 	go instanceIsMaster(pool, port)
@@ -124,16 +126,21 @@ func queueStats(port string) {
 				// Retry connection to Redis until it is back
 				defer c.Close()
 				log.Printf("connection to redis lost. retry in 1s\n")
-				time.Sleep(time.Second * 1)
+				time.Sleep(time.Second * time.Duration(connectionLostInterval))
 				c = pool.Get()
 				go keyspaceEnable(pool, port)
-				c.Send("PSUBSCRIBE", "__keyspace@*")
+				c.Send("PSUBSCRIBE", "__keyspace@*", "redis-scouter")
 				c.Flush()
+				c.Receive()
 				c.Receive()
 				continue
 			}
 			// match for a LIST keyspace event
 			for k, v := range reply {
+				if v == "stop" {
+					// break loop if we get a message on redis-scouter pubsub
+					continue
+				}
 				operation := listOperationsRegex.FindString(v)
 				queue := keyspaceRegex.FindStringSubmatch(k)
 				if len(queue) == 2 && operation != "" {
@@ -141,8 +148,8 @@ func queueStats(port string) {
 				}
 			}
 		} else {
-			log.Println("not fetching stats")
-			time.Sleep(time.Second * 1)
+			// do not fetch stats for now
+			time.Sleep(time.Second * time.Duration(fetchMetricsInterval))
 		}
 	}
 }
@@ -154,8 +161,6 @@ var keyspaceConfigRegex = regexp.MustCompile("^(AK.*|.*l.*K.*)$")
 var ports redisPorts
 var graph *graphite.Graphite
 var fetchPossible = make(map[string]bool)
-
-//var chans = make(map[string](chan bool))
 
 func main() {
 	flag.Var(&ports, "ports", "comma-separated list of redis ports")
@@ -194,7 +199,6 @@ func main() {
 
 	for _, port := range ports {
 		fetchPossible[port] = true
-		//chans[port] = make(chan bool)
 		log.Printf("[instance-%s] starting collector\n", port)
 		go queueStats(port)
 	}
