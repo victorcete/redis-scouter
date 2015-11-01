@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -77,10 +76,5 @@ func discoverInstances() []string {
 		//return fmt.Sprintf("Failed to execute command: %s", cmd)
 		return nil
 	}
-	puertos := strings.Split(strings.Replace(string(out), " ", "", -1), "\n")
-	for _, p := range puertos {
-		log.Printf("==%s==\n", p)
-		log.Println(len(p))
-	}
-	return puertos
+	return strings.Split(strings.Replace(string(out), " ", "", -1), "\n")
 }
