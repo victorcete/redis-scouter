@@ -27,7 +27,7 @@ func keyspaceEnable(pool *redis.Pool, port string) {
 	c := pool.Get()
 	defer c.Close()
 
-	// check if notify-keyspace-events are enabled
+	// Check if notify-keyspace-events are enabled.
 	notify, err := redis.StringMap(c.Do("CONFIG", "GET", "notify-keyspace-events"))
 	if err != nil {
 		log.Printf("[keyspace-check] %s\n", err)
@@ -36,12 +36,12 @@ func keyspaceEnable(pool *redis.Pool, port string) {
 
 	for _, v := range notify {
 		if keyspaceConfigRegex.FindString(v) != "" {
-			// already enabled, we can already listen for LIST events
+			// Already enabled, we can already listen for LIST events.
 			log.Printf("[keyspace-check-%s] LIST keyspace-notifications already enabled\n", port)
 		} else {
-			// we need to enable notify-keyspace-events for LIST operations (also do not override previous config if any)
+			// We need to enable notify-keyspace-events for LIST operations (also do not override previous config if any).
 			if v == "" {
-				// no previous config was set
+				// No previous config was set.
 				log.Printf("[keyspace-check-%s] Enabling LIST keyspace-notifications (no previous config found)\n", port)
 				_, err := redis.String(c.Do("CONFIG", "SET", "notify-keyspace-events", "lK"))
 				if err != nil {
@@ -49,7 +49,7 @@ func keyspaceEnable(pool *redis.Pool, port string) {
 					return
 				}
 			} else {
-				// previous config found, do not override
+				// Previous config found, do not override.
 				log.Printf("[keyspace-check-%s] Enabling LIST keyspace-notifications (previous config found)\n", port)
 				_, err := redis.String(c.Do("CONFIG", "SET", "notify-keyspace-events", v+"lK"))
 				if err != nil {
@@ -79,7 +79,7 @@ func instanceIsMaster(pool *redis.Pool, port string) {
 		master, err := redis.StringMap(c.Do("CONFIG", "GET", "slaveof"))
 		if err != nil {
 			log.Println(err)
-			// Retry connection to Redis until it is back
+			// Retry connection to Redis until it is back.
 			defer c.Close()
 			time.Sleep(time.Second * time.Duration(connectionLostInterval))
 			c = pool.Get()
@@ -87,14 +87,14 @@ func instanceIsMaster(pool *redis.Pool, port string) {
 		}
 		for _, value := range master {
 			if value != "" {
-				// instance is now a slave, notify
+				// Instance is now a slave, notify.
 				if fetchPossible[port] {
 					c.Do("PUBLISH", "redis-scouter", "stop")
 					fetchPossible[port] = false
 					log.Printf("[instance-check-%s] became a slave", port)
 				}
 			} else {
-				// re-enable metrics
+				// Re-enable metrics.
 				if !fetchPossible[port] {
 					fetchPossible[port] = true
 					log.Printf("[instance-check-%s] became a master", port)
@@ -106,7 +106,7 @@ func instanceIsMaster(pool *redis.Pool, port string) {
 }
 
 func queueStats(port string) {
-	// connect to redis
+	// Connect to redis.
 	pool := newPool(port)
 	c := pool.Get()
 	if !instanceAlive(pool) {
@@ -114,10 +114,10 @@ func queueStats(port string) {
 		return
 	}
 
-	// subscribe to the keyspace notifications
+	// Subscribe to the keyspace notifications.
 	c.Send("PSUBSCRIBE", "__keyspace@*", "redis-scouter")
 	c.Flush()
-	// ignore first two ACKs when subscribing
+	// Ignore first two ACKs when subscribing.
 	c.Receive()
 	c.Receive()
 
@@ -128,7 +128,7 @@ func queueStats(port string) {
 		if fetchPossible[port] {
 			reply, err := redis.StringMap(c.Receive())
 			if err != nil {
-				// Retry connection to Redis until it is back
+				// Retry connection to Redis until it is back.
 				defer c.Close()
 				log.Printf("connection to redis lost. retry in 1s\n")
 				time.Sleep(time.Second * time.Duration(connectionLostInterval))
@@ -140,10 +140,10 @@ func queueStats(port string) {
 				c.Receive()
 				continue
 			}
-			// match for a LIST keyspace event
+			// Match for a LIST keyspace event.
 			for k, v := range reply {
 				if v == "stop" {
-					// break loop if we get a message on redis-scouter pubsub
+					// Break loop if we get a message on redis-scouter pubsub.
 					continue
 				}
 				operation := listOperationsRegex.FindString(v)
@@ -153,7 +153,7 @@ func queueStats(port string) {
 				}
 			}
 		} else {
-			// do not fetch stats for now
+			// Do not fetch stats for now.
 			time.Sleep(time.Second * time.Duration(fetchMetricsInterval))
 		}
 	}
@@ -176,13 +176,13 @@ func main() {
 	profile := flag.Bool("profile", false, "enable pprof features for cpu/heap/goroutine")
 	flag.Parse()
 
-	// flag checks
+	// Flag checks.
 	if len(ports) == 0 {
 		log.Println("no redis instances defined, aborting")
 		return
 	}
 
-	// simulate graphite sending via stdout
+	// Simulate graphite sending via stdout.
 	if *simulate {
 		graph = graphite.NewGraphiteNop(*graphiteHost, *graphitePort)
 	} else {
@@ -194,7 +194,7 @@ func main() {
 		}
 	}
 
-	// check for enabled profiling flag
+	// Check for enabled profiling flag.
 	if *profile {
 		go http.ListenAndServe(":8888", nil)
 	}

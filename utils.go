@@ -29,13 +29,13 @@ func newPool(port string) *redis.Pool {
 	}
 }
 
-// fqdn with underscores
+// FQDN with underscores.
 func hostnameGraphite() string {
 	hostname, _ := os.Hostname()
 	return strings.Replace(hostname, ".", "_", -1)
 }
 
-// generic method to check if an element exists in a slice
+// Generic method to check if an element exists in a slice.
 func contains(s []string, i string) bool {
 	for _, v := range s {
 		if v == i {
@@ -45,12 +45,12 @@ func contains(s []string, i string) bool {
 	return false
 }
 
-// custom type to store the comma-separated list of
+// Custom type to store the comma-separated list of
 // redis ports to be monitored (in case there is more
-// than one instance on the host)
+// than one instance on the host).
 type redisPorts []string
 
-// Set implementation for flag.Value interface
+// Set implementation for flag.Value interface.
 func (i *redisPorts) Set(value string) error {
 	if len(*i) > 0 {
 		return errors.New("redis ports flag already set")
@@ -63,7 +63,7 @@ func (i *redisPorts) Set(value string) error {
 	return nil
 }
 
-// String implementation for flag.Value interface
+// String implementation for flag.Value interface.
 func (i *redisPorts) String() string {
 	return fmt.Sprint(*i)
 }
