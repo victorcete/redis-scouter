@@ -3,7 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -66,4 +68,19 @@ func (i *redisPorts) Set(value string) error {
 // String implementation for flag.Value interface.
 func (i *redisPorts) String() string {
 	return fmt.Sprint(*i)
+}
+
+func discoverInstances() []string {
+	cmd := "ps -e | grep [r]edis-server | awk '{print $5}' | cut -d':' -f2"
+	out, err := exec.Command("bash", "-c", cmd).Output()
+	if err != nil {
+		//return fmt.Sprintf("Failed to execute command: %s", cmd)
+		return nil
+	}
+	puertos := strings.Split(strings.Replace(string(out), " ", "", -1), "\n")
+	for _, p := range puertos {
+		log.Printf("==%s==\n", p)
+		log.Println(len(p))
+	}
+	return puertos
 }

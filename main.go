@@ -163,12 +163,13 @@ var Stats = expvar.NewMap("stats").Init()
 var listOperationsRegex = regexp.MustCompile("^(lpush|lpushx|rpush|rpushx|lpop|blpop|rpop|brpop)$")
 var keyspaceRegex = regexp.MustCompile("^__keyspace.*__:(?P<queue_name>.*)$")
 var keyspaceConfigRegex = regexp.MustCompile("^(AK.*|.*l.*K.*)$")
-var ports redisPorts
+
+//var ports redisPorts
 var graph *graphite.Graphite
 var fetchPossible = make(map[string]bool)
 
 func main() {
-	flag.Var(&ports, "ports", "comma-separated list of redis ports")
+	//flag.Var(&ports, "ports", "comma-separated list of redis ports")
 	graphiteHost := flag.String("graphite-host", "localhost", "graphite hostname")
 	graphitePort := flag.Int("graphite-port", 2003, "graphite port")
 	interval := flag.Int("interval", 60, "interval for sending graphite metrics")
@@ -177,10 +178,10 @@ func main() {
 	flag.Parse()
 
 	// Flag checks.
-	if len(ports) == 0 {
-		log.Println("no redis instances defined, aborting")
-		return
-	}
+	//if len(ports) == 0 {
+	//	log.Println("no redis instances defined, aborting")
+	//	return
+	//}
 
 	// Simulate graphite sending via stdout.
 	if *simulate {
@@ -194,23 +195,31 @@ func main() {
 		}
 	}
 
-	// Check for enabled profiling flag.
-	if *profile {
-		go http.ListenAndServe(":8888", nil)
-	}
-
 	hostname := hostnameGraphite()
 	ticker := time.NewTicker(time.Second * time.Duration(*interval)).C
 
+	ports := discoverInstances()
+	if ports == nil {
+		log.Println("no redis instances defined, aborting")
+		return
+	}
+
 	for _, port := range ports {
-		fetchPossible[port] = true
-		log.Printf("[instance-%s] starting collector\n", port)
-		go queueStats(port)
+		if len(port) != 0 {
+			fetchPossible[port] = true
+			log.Printf("[instance-%s] starting collector\n", port)
+			go queueStats(port)
+		}
 	}
 
 	sig := make(chan os.Signal, 1)
 	done := make(chan bool, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+
+	// Check for enabled profiling flag.
+	if *profile {
+		go http.ListenAndServe(":8888", nil)
+	}
 
 	go func() {
 		<-sig
