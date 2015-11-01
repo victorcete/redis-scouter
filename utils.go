@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -70,11 +71,18 @@ func (i *redisPorts) String() string {
 }
 
 func discoverInstances() []string {
-	cmd := "ps -e | grep [r]edis-server | awk '{print $5}' | cut -d':' -f2"
+	log.Printf("[utils] starting auto-discovery\n")
+	cmd := "ps -ef | grep [r]edis-server | awk '{print $9}' | cut -d':' -f2"
 	out, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
-		//return fmt.Sprintf("Failed to execute command: %s", cmd)
+		log.Printf("[utils] auto-discovery failed: %s\n", err)
 		return nil
 	}
-	return strings.Split(strings.Replace(string(out), " ", "", -1), "\n")
+	found := strings.Split(string(out), "\n")
+	// Skip the last newline character present on the array.
+	ports := found[:len(found)-1]
+	for _, port := range ports {
+		log.Printf("[utils] auto-discovery: found redis-server instance on port %s\n", port)
+	}
+	return ports
 }

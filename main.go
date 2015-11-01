@@ -200,16 +200,13 @@ func main() {
 
 	ports := discoverInstances()
 	if ports == nil {
-		log.Println("no redis instances defined, aborting")
 		return
 	}
 
 	for _, port := range ports {
-		if len(port) != 0 {
-			fetchPossible[port] = true
-			log.Printf("[instance-%s] starting collector\n", port)
-			go queueStats(port)
-		}
+		fetchPossible[port] = true
+		log.Printf("[instance-%s] starting collector\n", port)
+		go queueStats(port)
 	}
 
 	sig := make(chan os.Signal, 1)
