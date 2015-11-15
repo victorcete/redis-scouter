@@ -172,7 +172,7 @@ func main() {
 	graphiteHost := flag.String("graphite-host", "localhost", "graphite hostname")
 	graphitePort := flag.Int("graphite-port", 2003, "graphite port")
 	interval := flag.Int("interval", 60, "interval for sending graphite metrics")
-	simulate := flag.Bool("simulate", false, "simulate sending to graphite via stdout")
+	simulate := flag.Bool("simulate", true, "simulate sending to graphite via stdout")
 	profile := flag.Bool("profile", false, "enable pprof features for cpu/heap/goroutine")
 	flag.Parse()
 
@@ -183,7 +183,7 @@ func main() {
 		var err error
 		graph, err = graphite.NewGraphite(*graphiteHost, *graphitePort)
 		if err != nil {
-			log.Println(err)
+			log.Printf("[error] cannot connect to graphite on %s:%d\n", *graphiteHost, *graphitePort)
 			return
 		}
 	}
@@ -193,7 +193,8 @@ func main() {
 
 	// Auto-discover instances running on the current node.
 	ports := discoverInstances()
-	if ports == nil {
+	if len(ports) == 0 {
+		log.Println("[error] no redis instances running on this host")
 		return
 	}
 
